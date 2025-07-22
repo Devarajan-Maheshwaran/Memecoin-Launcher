@@ -26,7 +26,8 @@
   "devDependencies": {
     "@nomicfoundation/hardhat-network-helpers": "^1.1.0",
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",
-    "hardhat": "^2.22.16"
+    "hardhat": "^2.22.16",
+    "prettier": "^3.6.2"
   },
   "keywords": []
 }
