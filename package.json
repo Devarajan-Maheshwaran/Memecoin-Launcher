@@ -1,11 +1,7 @@
 {
   "name": "memecoin-launcher",
   "version": "1.0.0",
-
-  "description": "A platform where crypto-investors can create, buy and sell meme coins!!",
-
   "description": "A platform where crypto-investors can create, launch, buy and sell meme coins!!",
-
   "homepage": "https://github.com/Devarajan-Maheshwaran/Memecoin-Launcher#readme",
   "bugs": {
     "url": "https://github.com/Devarajan-Maheshwaran/Memecoin-Launcher/issues"
@@ -15,11 +11,7 @@
     "url": "git+https://github.com/Devarajan-Maheshwaran/Memecoin-Launcher.git"
   },
   "license": "ISC",
-
-  "author": "",
-
   "author": "Devarajan Maheshwaran",
-
   "type": "commonjs",
   "main": "index.js",
   "scripts": {
@@ -32,6 +24,7 @@
     "react-dom": "18.3.1"
   },
   "devDependencies": {
+    "@nomicfoundation/hardhat-network-helpers": "^1.1.0",
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",
     "hardhat": "^2.22.16"
   },

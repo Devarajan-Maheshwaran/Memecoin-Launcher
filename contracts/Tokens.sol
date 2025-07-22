@@ -16,6 +16,6 @@ contract MyToken is ERC20 {
         owner = payable(msg.sender);
         creator = _creator;
 
-        _mint(msg.sender, _totalSupply)
+        _mint(msg.sender, _totalSupply);
     }
 }

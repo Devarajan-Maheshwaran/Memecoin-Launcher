@@ -1,10 +1,10 @@
-const { loadFixture } = require("@nomicfoundation/hardhat-toolbox/network-helpers")
+const { loadFixture } = require("@nomicfoundation/hardhat-network-helpers")
 const { expect } = require("chai")
 const { ethers } = require("hardhat")
 
 describe ("Factory", function(){
 
-    async function Deployfactoryfixture() {
+    async function DeployFactoryFixture() {
         // Fetch Contract
         const Factory = await ethers.getContractFactory("Factory")
         // Deploy Contract
@@ -14,7 +14,7 @@ describe ("Factory", function(){
     }
 
     it("should have a name", async function(){
-        const { factory } = await Deployfactoryfixture()
+        const { factory } = await DeployFactoryFixture()
         // Check Name
         const name = await factory.name()
         expect(name).to.equal("Factory")
