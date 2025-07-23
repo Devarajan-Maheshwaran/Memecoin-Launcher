@@ -10,6 +10,17 @@ contract Factory{
 
     address[] public tokens;
 
+    mapping(address => TokenSale) public tokentoSale;
+
+    struct TokenSale {
+        address token;
+        string name;
+        address creator;
+        uint256 sold;
+        uint256 raised;
+        bool isOpen;
+    };
+
     constructor(uint256 _fee){
         fee = _fee;
         owner = msg.sender;
@@ -17,6 +28,10 @@ contract Factory{
     
     event TokenCreated(address tokenAddress);
 
+    function getTokenSale(uint256 _index) public view returns( TokenSale memory ){
+        return tokentoSale[tokens[_index]];
+    }
+    
     function createToken(string memory _name, string memory _symbol) external payable {
         MyToken token = new MyToken(
             msg.sender,
@@ -29,5 +44,17 @@ contract Factory{
         tokens.push(address(token));
 
         totalTokens++;
+
+        TokenSale memory sales = TokenSale(
+            address(token),
+            _name,
+            msg.sender,
+            0,
+            0,
+            true
+        );
+
+        tokentoSale[address(token)] = sales;
     }
+    
 }
