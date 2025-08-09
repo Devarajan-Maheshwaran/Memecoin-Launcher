@@ -4,9 +4,9 @@ pragma solidity ^0.8.27;
 import { MyToken } from "./Tokens.sol";
 
 contract Factory{
-    uint256 public immutable fee;
+    uint256 public immutable factoryFee;
     address public owner; 
-    uint256 totalTokens;
+    uint256 public totalTokens;
 
     address[] public tokens;
 
@@ -19,10 +19,11 @@ contract Factory{
         uint256 sold;
         uint256 raised;
         bool isOpen;
-    };
+
+    event Created(address indexed token);
 
     constructor(uint256 _fee){
-        fee = _fee;
+        factoryFee = _fee;
         owner = msg.sender;
     }
     
@@ -33,12 +34,15 @@ contract Factory{
     }
     
     function createToken(string memory _name, string memory _symbol) external payable {
+        require(msg.value >= factoryFee, "Insufficient fee sent");
+        
         MyToken token = new MyToken(
             msg.sender,
             _name,
             _symbol,
             1_000_000 ether            
         );
+        
         emit TokenCreated(address(token));
 
         tokens.push(address(token));
@@ -56,5 +60,5 @@ contract Factory{
 
         tokentoSale[address(token)] = sales;
     }
-    
+
 }

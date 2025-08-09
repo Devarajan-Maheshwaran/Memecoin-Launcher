@@ -34,6 +34,7 @@ describe ("Factory", function(){
             // Check if the fee is set correctly
             const { factory } = await loadFixture(DeployFactoryFixture)
             expect(await factory.fee()).to.equal(Fee)
+            })
         })
         it("Should set the owner", async function(){
             // Check if the deployer is set as the owner
@@ -76,5 +77,11 @@ describe ("Factory", function(){
             expect(count).to.equal(1)
 
             const sale = await factory.getTokenSale(0)
+
+            expect(sale.token).to.equal(token.getAddress())
+            expect(sale.creator).to.equal(creator.address())
+            expect(sale.sold).to.equal(0)       
+            expect(sale.raised).to.equal(0)
+            expect(sale.isOpen).to.equal(true)
+        })
     })
-})
