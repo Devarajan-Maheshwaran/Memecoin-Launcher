@@ -1,87 +1,126 @@
-// Import necessary Hardhat and Chai helpers
+// Import testing tools
 const { loadFixture } = require("@nomicfoundation/hardhat-network-helpers")
 const { expect } = require("chai")
 const { ethers } = require("hardhat")
 
-// Set the deployment fee (0.01 ETH, 18 decimals)
-const Fee = ethers.parseUnits("0.01",18)
+// Fee to create a token: 0.01 ETH
+const Fee = ethers.parseUnits("0.01", 18)
 
-// Fixture to deploy Factory and create a token for each test
+// Setup function: deploys factory and creates first token
 async function DeployFactoryFixture() {
-    // Fetch deployer and creator accounts
-    const [deployers, creator] = await ethers.getSigners()
-    // Get Factory contract factory
+    // Get test accounts
+    const [deployers, creator, buyer] = await ethers.getSigners()
+    
+    // Deploy factory contract
     const Factory = await ethers.getContractFactory("Factory")
-    // Deploy Factory contract with fee
     const factory = await Factory.deploy(Fee)
-    // Creator creates a new token via Factory
-    const transaction = await factory.connect(creator).createToken("BRX", "BRX", {value : Fee})
-    await transaction.wait()
-    // Get the address of the newly created token
-    const tokenAddress = await factory.tokens(0)    
-    // Get the MyToken contract instance at the token address
+    
+    // Create first token
+    await factory.connect(creator).createToken("BRX", "BRX", {value: Fee})
+    
+    // Get token contract
+    const tokenAddress = await factory.tokens(0)
     const token = await ethers.getContractAt("MyToken", tokenAddress)
-
-    // Return all relevant objects for tests
-    return { factory, deployers, token, creator }
+    
+    return { factory, deployers, token, creator, buyer }
 }
 
-// Main test suite for Factory contract
-describe ("Factory", function(){
-    // Test deployment-related properties
-    describe("Deployment", function(){
-        it("Should equal the fee", async function(){
-            // Check if the fee is set correctly
+// Setup function: buy tokens from existing sale
+async function buyTokenFixture() {
+    const {factory, token, creator, buyer} = await DeployFactoryFixture()
+    
+    // Buy 10,000 tokens for 1 ETH
+    const AMOUNT = ethers.parseUnits("10000", 18)
+    const COST = ethers.parseUnits("1", 18)
+    
+    await factory.connect(buyer).buyToken(token.getAddress(), AMOUNT, {value: COST})
+    
+    return { factory, token, creator, buyer }
+}
+
+// Test the Factory contract
+describe("Factory", function() {
+    
+    // Test deployment
+    describe("Deployment", function() {
+        it("Should set correct fee", async function() {
             const { factory } = await loadFixture(DeployFactoryFixture)
             expect(await factory.fee()).to.equal(Fee)
-            })
         })
-        it("Should set the owner", async function(){
-            // Check if the deployer is set as the owner
+        
+        it("Should set correct owner", async function() {
             const { factory, deployers } = await loadFixture(DeployFactoryFixture)
             expect(await factory.owner()).to.equal(deployers.address)
         })
     })
 
-    // Test token creation and its properties
-    describe("Create Token", function(){
-        it("Should set the owner", async function(){
-            // The Factory should be the owner of the new token
-            const { factory, token  } = await loadFixture(DeployFactoryFixture)
+    // Test token creation
+    describe("Create Token", function() {
+        it("Factory should own the token", async function() {
+            const { factory, token } = await loadFixture(DeployFactoryFixture)
             expect(await token.owner()).to.equal(await factory.getAddress())
         })
 
-        it("Should set the creator", async function(){
-            // The creator should be set correctly in the token
+        it("Should set correct creator", async function() {
             const {token, creator} = await loadFixture(DeployFactoryFixture)
-            expect(await token.creator()).to.equal(creator.address) 
+            expect(await token.creator()).to.equal(creator.address)
         })
 
-        it("Should set the supply", async function(){
-            // The Factory should hold the initial supply of the token
+        it("Factory should hold all tokens", async function() {
             const { factory, token } = await loadFixture(DeployFactoryFixture)
             expect(await token.balanceOf(factory.getAddress())).to.equal(ethers.parseUnits("1000000", 18))
         })
 
-        it("Should set ETH balance", async function(){
-            // The Factory should receive the fee in ETH
+        it("Factory should receive creation fee", async function() {
             const { factory } = await loadFixture(DeployFactoryFixture)
             const balance = await ethers.provider.getBalance(factory.getAddress())
             expect(balance).to.equal(Fee)
         })
 
-        it("Should create the sale", async function(){
-            const { factory, token } = await loadFixture(DeployFactoryFixture)
-
-            const count = await factory.totalTokens()
-            expect(count).to.equal(1)
-
+        it("Should create sale record", async function() {
+            const { factory, token, creator } = await loadFixture(DeployFactoryFixture)
+            
+            expect(await factory.totalTokens()).to.equal(1)
+            
             const sale = await factory.getTokenSale(0)
-
             expect(sale.token).to.equal(token.getAddress())
-            expect(sale.creator).to.equal(creator.address())
-            expect(sale.sold).to.equal(0)       
+            expect(sale.creator).to.equal(creator.address)
+            expect(sale.sold).to.equal(0)
             expect(sale.raised).to.equal(0)
             expect(sale.isOpen).to.equal(true)
         })
     })
+
+    // Test buying tokens
+    describe("Buying", function() {
+        const AMOUNT = ethers.parseUnits("10000", 18)
+        const COST = ethers.parseUnits("1", 18)
+
+        it("Should increase factory ETH balance", async function() {
+            const { factory } = await loadFixture(buyTokenFixture)
+            const balance = await ethers.provider.getBalance(await factory.getAddress())
+            expect(balance).to.equal(Fee.add(COST))
+        })
+
+        it("Should transfer tokens to buyer", async function() {
+            const { token, buyer } = await loadFixture(buyTokenFixture)
+            expect(await token.balanceOf(buyer.address)).to.equal(AMOUNT)
+        })
+
+        it("Should update sale records", async function() {
+            const { factory, token } = await loadFixture(buyTokenFixture)
+            const sale = await factory.getTokenSale(0)
+            
+            expect(sale.sold).to.equal(AMOUNT)
+            expect(sale.raised).to.equal(COST)
+            expect(sale.isOpen).to.equal(true)
+        })
+
+        it("Should increase token price", async function() {
+            const { factory, token } = await loadFixture(buyTokenFixture)
+            const sale = await factory.tokenToSale(token.getAddress())
+            const cost = await factory.getCost(sale.sold)
+            expect(cost).to.equal(ethers.parseUnits("0.0002", 18))
+        })
+    })
+})
